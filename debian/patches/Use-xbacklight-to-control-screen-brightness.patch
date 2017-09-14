@@ -1,0 +1,224 @@
+--- a/plugins/power/gpm-common.c
++++ b/plugins/power/gpm-common.c
+@@ -379,11 +379,8 @@
+ #ifdef GSD_MOCK
+ 	return TRUE;
+ #endif
+-
+-#ifndef __linux__
+-        return (get_primary_output (rr_screen) != NULL);
+-#endif
+-
++        if (get_primary_output (rr_screen) != NULL)
++                return TRUE;
+         path = gsd_backlight_helper_get_best_backlight (NULL);
+         if (path == NULL)
+                 return FALSE;
+@@ -582,35 +579,37 @@
+ int
+ backlight_get_abs (GnomeRRScreen *rr_screen, GError **error)
+ {
+-#ifndef __linux__
+         GnomeRROutput *output;
++
++        /* prefer xbacklight */
+         output = get_primary_output (rr_screen);
+         if (output != NULL) {
+                 return gnome_rr_output_get_backlight (output);
+         }
+-        return -1;
+-#else
++
++        /* fall back to the polkit helper */
+         return backlight_helper_get_value (BACKLIGHT_HELPER_GET, error);
+-#endif
+ }
+ 
+ int
+ backlight_get_percentage (GnomeRRScreen *rr_screen, GError **error)
+ {
++        GnomeRROutput *output;
+         gint now;
+         gint value = -1;
+         gint max;
+-#ifndef __linux__
+-        GnomeRROutput *output;
++
++ /* prefer xbacklight */
+         output = get_primary_output (rr_screen);
+         if (output != NULL) {
+                 now = gnome_rr_output_get_backlight (output);
+                 if (now < 0)
+                         return value;
+                 value = ABS_TO_PERCENTAGE (0, 100, now);
++                return value;
+         }
+-        return value;
+-#else
++
++        /* fall back to the polkit helper */
+         max = backlight_helper_get_value (BACKLIGHT_HELPER_GET_MAX, error);
+         if (max < 0)
+                 return value;
+@@ -619,7 +618,6 @@
+                 return value;
+         value = ABS_TO_PERCENTAGE (0, max, now);
+         return value;
+-#endif
+ }
+ 
+ int
+@@ -631,11 +629,15 @@
+ int
+ backlight_get_max (GnomeRRScreen *rr_screen, GError **error)
+ {
+-#ifndef __linux__
+-        return 100;
+-#else
++        GnomeRROutput *output;
++
++        /* prefer xbacklight */
++        output = get_primary_output (rr_screen);
++        if (output != NULL)
++                return 100;
++
++        /* fall back to the polkit helper */
+         return  backlight_helper_get_value (BACKLIGHT_HELPER_GET_MAX, error);
+-#endif
+ }
+ 
+ gboolean
+@@ -643,20 +645,21 @@
+                           gint *value,
+                           GError **error)
+ {
++        GnomeRROutput *output;
+         gboolean ret = FALSE;
+         gint max;
+         guint discrete;
+-#ifndef __linux__
+-        GnomeRROutput *output;
++        /* prefer xbacklight */
+         output = get_primary_output (rr_screen);
+         if (output != NULL) {
+                 if (!gnome_rr_output_set_backlight (output, *value, error))
+                         return ret;
+                 *value = gnome_rr_output_get_backlight (output);
+                 ret = TRUE;
++                return ret;
+         }
+-        return ret;
+-#else
++
++        /* fall back to the polkit helper */
+         max = backlight_helper_get_value (BACKLIGHT_HELPER_GET_MAX, error);
+         if (max < 0)
+                 return ret;
+@@ -666,21 +669,21 @@
+                 *value = ABS_TO_PERCENTAGE (0, max, discrete);
+ 
+         return ret;
+-#endif
+ }
+ 
+ int
+ backlight_step_up (GnomeRRScreen *rr_screen, GError **error)
+ {
++        GnomeRROutput *output;
+         gboolean ret = FALSE;
+         gint percentage_value = -1;
+         gint max;
+         gint now;
+         gint step;
+         guint discrete;
+-#ifndef __linux__
+         GnomeRRCrtc *crtc;
+-        GnomeRROutput *output;
++
++        /* prefer xbacklight */
+         output = get_primary_output (rr_screen);
+         if (output != NULL) {
+ 
+@@ -704,9 +707,10 @@
+                                                      error);
+                 if (ret)
+                         percentage_value = ABS_TO_PERCENTAGE (0, max, discrete);
++                        return percentage_value;
+         }
+-        return percentage_value;
+-#else
++
++        /* fall back to the polkit helper */
+         now = backlight_helper_get_value (BACKLIGHT_HELPER_GET, error);
+         if (now < 0)
+                 return percentage_value;
+@@ -720,21 +724,21 @@
+                 percentage_value = ABS_TO_PERCENTAGE (0, max, discrete);
+ 
+         return percentage_value;
+-#endif
+ }
+ 
+ int
+ backlight_step_down (GnomeRRScreen *rr_screen, GError **error)
+ {
++        GnomeRROutput *output;
+         gboolean ret = FALSE;
+         gint percentage_value = -1;
+         gint max;
+         gint now;
+         gint step;
+         guint discrete;
+-#ifndef __linux__
+         GnomeRRCrtc *crtc;
+-        GnomeRROutput *output;
++
++        /* prefer xbacklight */
+         output = get_primary_output (rr_screen);
+         if (output != NULL) {
+ 
+@@ -758,9 +762,10 @@
+                                                      error);
+                 if (ret)
+                         percentage_value = ABS_TO_PERCENTAGE (0, max, discrete);
++                return percentage_value;
+         }
+-        return percentage_value;
+-#else
++
++        /* fall back to the polkit helper */
+         now = backlight_helper_get_value (BACKLIGHT_HELPER_GET, error);
+         if (now < 0)
+                 return percentage_value;
+@@ -774,7 +779,6 @@
+                 percentage_value = ABS_TO_PERCENTAGE (0, max, discrete);
+ 
+         return percentage_value;
+-#endif
+ }
+ 
+ int
+@@ -782,18 +786,18 @@
+                    guint value,
+                    GError **error)
+ {
+-        gboolean ret = FALSE;
+-#ifndef __linux__
+         GnomeRROutput *output;
++        gboolean ret = FALSE;
++
++        /* prefer xbacklight */
+         output = get_primary_output (rr_screen);
+         if (output != NULL)
+                 return gnome_rr_output_set_backlight (output, value, error);
+-        return ret;
+-#else
++
++        /* fall back to the polkit helper */
+         ret = backlight_helper_set_value (value, error);
+ 
+         return ret;
+-#endif
+ }
+ 
+ void
