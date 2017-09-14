@@ -1,3 +1,9 @@
+gnome-settings-daemon (3.22.2-2+deb9u2sci9u1) scibian9; urgency=medium
+
+  * GNOME Power Manager: Use xbacklight to control screen brightness
+
+ -- Scibian Packaging Team <packaging@scibian.org>  Thu, 14 Sep 2017 17:01:02 +0200
+
 gnome-settings-daemon (3.22.2-2+deb9u2) stretch; urgency=medium
 
   * d/p/keyboard-Only-add-the-us-layout-if-the-system-config.patch:
