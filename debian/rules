@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+include /usr/share/gnome-pkg-tools/1/rules/gnome-get-source.mk
+
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,defs -Wl,-O1 -Wl,--warn-unresolved-symbols -Wl,--as-needed
+
+%:
+	dh $@ --with gnome
+
+ifneq ($(DEB_HOST_ARCH_OS),linux)
+CONFFLAGS = \
+	--disable-rfkill \
+	--disable-network-manager \
+	--disable-alsa
+endif
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		--libdir=\$${prefix}/lib \
+		--libexecdir=\$${libdir}/gnome-settings-daemon \
+		--disable-static \
+		$(CONFFLAGS)
+
+override_dh_autoreconf:
+	dh_autoreconf --as-needed
+
+override_dh_install:
+	dh_install --fail-missing -X.la
+
+# test-suite currently fails, see https://bugzilla.gnome.org/show_bug.cgi?id=770684
+override_dh_auto_test:
